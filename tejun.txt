@@ -1,0 +1,29 @@
+(1) git init
+(2) git config --global user.name kengo417
+    git config --global user.email kengo417@ac.cyberhome.ne.jp
+(3) git config --global http.proxy http://プロキシ名:ポート番号
+    git config --global https.proxy http://プロキシ名:ポート番号
+(4) git config --list 
+(5) git add <ファイル or フォルダ>
+    git commit -m "comment"
+    git status
+    git log
+(6) git pull
+    git push
+(7) ./cipherscan https://google.co.jp:443
+    ./cipherscan https://www.avansato.co.jp:443
+
+※１
+  cygwin では、「go」コマンドがないので別途インストール
+※２
+  Linux では、six ライブラリがないので別途インストール
+  パッケージの在りかは不明
+
+履歴も含めて完全消去
+git filter-branch -f --index-filter 'git rm --ignore-unmatch unko.zip' HEAD
+ or
+git filter-branch --tree-filter 'rm -f unko.zip' HEAD --all
+
+git reflog expire --expire=now --all
+git gc --aggressive --prune=now
+git push --force origin master

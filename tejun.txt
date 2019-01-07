@@ -4,13 +4,15 @@
 (3) git config --global http.proxy http://プロキシ名:ポート番号
     git config --global https.proxy http://プロキシ名:ポート番号
 (4) git config --list 
-(5) git add <ファイル or フォルダ>
+(5) git clone https://github.com/kengo417/avansato.git
+    cd avansato
+(6) git add <ファイル or フォルダ>
     git commit -m "comment"
     git status
     git log
-(6) git pull
+(7) git pull
     git push
-(7) ./cipherscan https://google.co.jp:443
+(8) ./cipherscan https://google.co.jp:443
     ./cipherscan https://www.avansato.co.jp:443
 
 ※１

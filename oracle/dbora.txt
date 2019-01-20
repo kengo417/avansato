@@ -1,0 +1,59 @@
+#!/bin/sh
+
+# chkconfig: 2345 99 10
+# description: starts and stops oracle instances
+
+# Set ORA_HOME to be equivalent to the $ORACLE_HOME
+# from which you wish to execute dbstart and dbshut;
+#
+# Set ORA_OWNER to the user id of the owner of the
+# Oracle database in ORA_HOME.
+
+ORA_HOME=/opt/oracle/app/product/11.2.0
+ORA_OWNER=oracle
+export ORACLE_HOME=$ORA_HOME
+
+if [ ! -f $ORA_HOME/bin/dbstart -o ! -d $ORA_HOME ]
+then
+        echo "Oracle startup: cannot start"
+        exit
+fi
+
+case "$1" in
+        start)
+                # Start the Oracle databases:
+                su - $ORA_OWNER -c "$ORA_HOME/bin/dbstart"
+                # Start Oracle Net
+                su - $ORA_OWNER -c "$ORA_HOME/bin/lsnrctl start"
+                # Start emctl
+                su - $ORA_OWNER -c "$ORA_HOME/bin/emctl start dbconsole"
+
+                touch /var/lock/subsys/dbora
+                ;;
+        stop)
+                # Stop Oracle Net
+                su - $ORA_OWNER -c "$ORA_HOME/bin/lsnrctl stop"
+                # Stop the Oracle databases:
+                su - $ORA_OWNER -c "$ORA_HOME/bin/dbshut"
+                # Stop emctl   
+                su - $ORA_OWNER -c "$ORA_HOME/bin/emctl stop dbconsole"
+
+                rm -f /var/lock/subsys/dbora
+                ;;
+        restart)
+                $0 stop
+                $0 start
+                ;;
+        status)
+                if [ -f /var/lock/subsys/dbora ]; then
+                echo $0 started.
+                else   
+                echo $0 stopped.
+                fi
+                ;;
+        *)
+                echo "usage: dbora {start|stop|restart|status}"
+                exit 1
+esac
+
+exit 0

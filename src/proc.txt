@@ -3,4 +3,6 @@ http://otndnld.oracle.co.jp/document/products/oracle10g/102/doc_cd/appdev.102/B1
 
 
 https://docs.oracle.com/cd/E16338_01/appdev.112/e50264/oci05bnd.htm#i421503
+https://docs.oracle.com/cd/E96517_01/lnoci/loe.html
+
 

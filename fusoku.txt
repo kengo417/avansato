@@ -1,3 +1,0 @@
-K091637 avansato> bc
-C:/cygwin/bin/bc.exe: error while loading shared libraries: cygreadline6.dll: cannot open shared object file: No such file or directory
-

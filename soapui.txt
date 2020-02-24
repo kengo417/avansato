@@ -1,2 +1,0 @@
--Dsoapui.https.protocols=TLSv1.2,SSLv3
-end.

@@ -1,0 +1,52 @@
+https://ひとりでできるもん.com/2019/03/27/truncate%E3%82%92%E9%82%AA%E9%AD%94%E3%81%99%E3%82%8B%E7%8A%AF%E4%BA%BA%E3%81%AF%E8%AA%B0%E3%81%A0%EF%BC%9F2-2/
+
+http://www.kony.net/blog/entry/20060807230116.php
+
+http://kenken0807.hatenablog.com/entry/2016/07/06/191149
+
+
+
+
+■概要
+10gからの新機能にセグメント縮小(SHRINK)機能があります。
+HWM以下の空領域も含めて解放できることがポイントです。
+実行は、SHRINK SPACE句を使用します。
+
+SHRINKには2フェーズあります。
+
+①圧縮：INSERT/DELETE文を使用したリプレース処理(行ロック)
+②解放：HWMの引き下げ処理・未使用領域解放(表ロック)
+
+また、解放時、共有プール内のカーソルが無効化されます。
+そのため、ピーク時間帯や、解放に伴うカーソルの無効化を
+避けるには、圧縮のみ行い、オフピーク時間帯に解放を行う
+運用を検討する必要があります。
+
+■SHRINK SPACE句可能なSQL
+・ALTER TABLE
+・ALTER MATERIALIZED VIEW
+・ALTER MATERIALIZED VIEW LOG
+・ALTER INDEX
+
+ただし、クラスタ化された表やLONG列のある表、
+LOGセグメントのある表は対象外です。
+
+■条件
+本機能を使用するための条件は、以下の2つです。
+
+・ASSM(自動領域管理セグメント)であること
+・行管理の有効化がされていること
+
+■コマンド
+・圧縮と解放を行う
+SQL> ALTER TABLE 表名 SHRINK SPACE;
+
+・圧縮のみを行う
+SQL> ALTER TABLE 表名 SHRINK SPACE COMPACT;
+
+※圧縮の次に解放を行う場合は、COMPACT実行の後、
+　ALTER TABLE 表名 SHRINK SPACE; を実行します。
+
+・依存オブジェクト(索引など)も同時に縮小する
+SQL> ALTER TABLE 表名 SHRINK SPACE CASCADE;
+

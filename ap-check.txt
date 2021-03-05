@@ -1,243 +1,207 @@
-適用
-１．総合とプログラム一覧の違いチェック
-　　※実物と台帳を比較し、相違を修正する
-　　　実物がない場合は、実物を適用する
-　　　台帳にないものがあれば台帳を修正
-　　　⇒実物と台帳が一致する
-　　※jarファイルの中身もチェック
-　　　jarファイルチェックツールを利用しつつ
-　　　過不足をどのようにチェックするかが課題
 
-２．適用ファイル（tarファイル）と、登録依頼書の相違チェック
-　　適用ファイル（tarファイル）を適当な場所へ展開し、
-　　・依頼書の記載内容と比較を行う
-　　・JP1で吸い上げる？
+'***************************************************************************************************
+'   FTPでファイル一覧を取得する                                     Module1(Module)
+'
+'   作成者:井上治  URL:http://www.ne.jp/asahi/excel/inoue/ [Excelでお仕事!]
+'***************************************************************************************************
+'変更日付 Rev  変更履歴内容------------------------------------------------------------------------>
+'06/01/14(1.00)新規作成
+'20/03/02(1.10)*.xlsm化、他
+'***************************************************************************************************
+Option Explicit
+'===================================================================================================
+Public Const g_cnsTEST As Integer = 1                       ' テストモ－ド
+'Public Const g_cnsTEST As Integer = 0                       ' 本番モード(Debug出力なし)
+'---------------------------------------------------------------------------------------------------
+Private tblPath(1 To 50) As String                          ' フォルダ名表示用テーブル
 
-３．ジョブネットの適用ミスのチェック
-　　ジョブ適用のエクセルファイルの何をチェックする？
-　　具体的なチェック内容
-　　・実行エージェント列のサーバ？
-　　・実行ファイル名列に示すファイルがあるか？
-　　　Excel ファイル
-　　　　・既にあるものを修正：総合（修正元）と修正版の比較
-　　　　・無から作り上げる　：必要な項目（開始時間とかホスト名とか etc..）のチェック
-　　　　・モジュールのチェック
-
-
-******************************************************************************************
-● API定義 標準モジュール
-
-' Constants - InternetOpen.lAccessType
-Public Const INTERNET_OPEN_TYPE_PRECONFIG As Long = 0&
-Public Const INTERNET_OPEN_TYPE_DIRECT As Long = 1&
-Public Const INTERNET_OPEN_TYPE_PROXY As Long = 3&
-Public Const INTERNET_OPEN_TYPE_PRECONFIG_WITH_NO_AUTOPROXY As Long = 4&
-
-' Constants - InternetOpen.dwFlags
-Public Const INTERNET_FLAG_ASYNC As Long = &H10000000
-Public Const INTERNET_FLAG_FROM_CACHE As Long = &H1000000
-Public Const INTERNET_FLAG_OFFLINE As Long = INTERNET_FLAG_FROM_CACHE
-
-' Constants - InternetConnect.nServerPort
-Public Const INTERNET_INVALID_PORT_NUMBER As Long = 0&
-Public Const INTERNET_DEFAULT_FTP_PORT As Long = 21&
-Public Const INTERNET_DEFAULT_GOPHER_PORT As Long = 70&
-Public Const INTERNET_DEFAULT_HTTP_PORT As Long = 80&
-Public Const INTERNET_DEFAULT_HTTPS_PORT As Long = 443&
-Public Const INTERNET_DEFAULT_SOCKS_PORT As Long = 1080&
-
-' Constants - InternetConnect.dwService
-Public Const INTERNET_SERVICE_FTP As Long = 1&
-Public Const INTERNET_SERVICE_GOPHER As Long = 2&
-Public Const INTERNET_SERVICE_HTTP As Long = 3&
-
-' Constants - InternetConnect.dwFlags
-Public Const INTERNET_FLAG_PASSIVE As Long = &H8000000
-
-' Constants - FtpGetFile.dwFlags (FTP TransferType)
-' Constants - FtpPutFile.dwFlags (FTP TransferType)
-Public Const FTP_TRANSFER_TYPE_UNKNOWN As Long = &H0&
-Public Const FTP_TRANSFER_TYPE_ASCII As Long = &H1&
-Public Const FTP_TRANSFER_TYPE_BINARY As Long = &H2&
-Public Const INTERNET_FLAG_TRANSFER_ASCII As Long = FTP_TRANSFER_TYPE_ASCII
-Public Const INTERNET_FLAG_TRANSFER_BINARY As Long = FTP_TRANSFER_TYPE_BINARY
-
-' Constants - FtpGetFile.dwFlags (Cache Flags)
-' Constants - FtpPutFile.dwFlags (Cache Flags)
-Public Const INTERNET_FLAG_RELOAD As Long = &H80000000
-Public Const INTERNET_FLAG_RESYNCHRONIZE As Long = &H800
-Public Const INTERNET_FLAG_NEED_FILE As Long = &H10
-Public Const INTERNET_FLAG_HYPERLINK As Long = &H400
-
-' Constants - FtpGetFile.dwFlagsAndAttributes
-Public Const FILE_ATTRIBUTE_ARCHIVE As Long = &H20
-Public Const FILE_ATTRIBUTE_ENCRYPTED As Long = &H4000
-Public Const FILE_ATTRIBUTE_HIDDEN As Long = &H2
-Public Const FILE_ATTRIBUTE_NORMAL As Long = &H80
-Public Const FILE_ATTRIBUTE_OFFLINE As Long = &H1000
-Public Const FILE_ATTRIBUTE_READONLY As Long = &H1
-Public Const FILE_ATTRIBUTE_SYSTEM As Long = &H4
-Public Const FILE_ATTRIBUTE_TEMPORARY As Long = &H100
-Public Const FILE_ATTRIBUTE_DIRECTORY As Long = &H10
-Public Const FILE_ATTRIBUTE_COMPRESSED As Long = &H800
-
-'============
-' FILETIME 構造体
-'============
-Type FILETIME
-   dwLowDateTime As Long
-   dwHighDateTime As Long
-End Type
-
-'==================
-' WIN32_FIND_DATA 構造体
-'==================
-Public Const MAX_PATH = 260
-Type WIN32_FIND_DATA
-   dwFileAttributes As Long
-   ftCreationTime As FILETIME
-   ftLastAccessTime As FILETIME
-   ftLastWriteTime As FILETIME
-   nFileSizeHigh As Long
-   nFileSizeLow As Long
-   dwReserved0 As Long
-   dwReserved1 As Long
-   cFileName As String * MAX_PATH
-   cAlternate As String * 14
-End Type
-
-'========================
-' インターネットハンドルを取得します。
-'========================
-Public Declare Function InternetOpen Lib "WININET.DLL" Alias "InternetOpenA" _
-(ByVal lpszAgent As String, ByVal dwAccessType As Long, ByVal lpszProxyName As String, _
-ByVal lpszProxyBypass As String, ByVal dwFlags As Long) As Long
-
-'=============
-' サーバへ接続します。
-'=============
-Public Declare Function InternetConnect Lib "WININET.DLL" Alias "InternetConnectA" _
-(ByVal HINTERNET As Long, ByVal lpszServerName As String, ByVal nServerPort As Integer, _
-ByVal lpszUsername As String, ByVal lpszPassword As String, ByVal dwService As Long, _
-ByVal dwFlags As Long, ByVal dwContext As Long) As Long
-
-'======================
-' インターネットハンドルを閉じます。
-'======================
-Public Declare Function InternetCloseHandle Lib "WININET.DLL" _
-(ByVal HINTERNET As Long) As Integer
-
-'============================
-' サーバのカレントディレクトリを取得します。
-'============================
-Public Declare Function FtpGetCurrentDirectory Lib "WININET.DLL" Alias "FtpGetCurrentDirectoryA" _
-(ByVal hConnect As Long, ByVal lpszCurrentDirectory As String, _
-ByRef lpdwCurrentDirectory As Long) As Boolean
-
-'============================
-' サーバのカレントディレクトリを設定します。
-'============================
-Public Declare Function FtpSetCurrentDirectory Lib "WININET.DLL" Alias "FtpSetCurrentDirectoryA" _
-(ByVal hConnect As Long, ByVal lpszDirectory As String) As Long
-
-'=====================
-' サーバからファイルを取得します。
-'=====================
-Public Declare Function FtpGetFile Lib "WININET.DLL" Alias "FtpGetFileA" _
-(ByVal hConnect As Long, ByVal lpszRemoteFile As String, _
-ByVal lpszNewFile As String, ByVal fFailIfExists As Boolean, ByVal dwFlagsAndAttributes As Long, _
-ByVal dwFlags As Long, ByVal dwContext As Long) As Long
-
-'===================
-' サーバへファイルを転送します｡
-'===================
-Public Declare Function FtpPutFile Lib "WININET.DLL" Alias "FtpPutFileA" _
-(ByVal hConnect As Long, ByVal lpszLocalFile As String, _
-ByVal lpszNewRemoteFile As String, _
-ByVal dwFlags As Long, ByVal dwContext As Long) As Long
-
-'====================
-' サーバのファイルを削除します｡
-'====================
-Public Declare Function FtpDeleteFile Lib "WININET.DLL" Alias "FtpDeleteFileA" _
-(ByVal hConnect As Long, ByVal lpszFileName As String) As Long
-
-'=====================
-' サーバのファイル名を変更します｡
-'=====================
-Public Declare Function FtpRenameFile Lib "WININET.DLL" Alias "FtpRenameFileA" _
-(ByVal hConnect As Long, ByVal lpszExisting As String, ByVal lpszNew As String) As Long
-
-'======================
-' サーバのディレクトリを削除します｡
-'======================
-Public Declare Function FtpRemoveDirectory Lib "WININET.DLL" Alias "FtpRemoveDirectoryA" _
-(ByVal hConnect As Long, ByVal lpszDirectory As String) As Long
-
-'========================
-' 指定されたディレクトリを検索します。
-'========================
-Public Declare Function FtpFindFirstFile Lib "wininet.dll" Alias "FtpFindFirstFileA" _
-(ByVal hFtpSession As Long, ByVal lpszSearchFile As String, _
-lpFindFileData As WIN32_FIND_DATA, ByVal dwFlags As Long, ByVal dwContent As Long) As Long
-
-'========================
-' 引き続き、ディレクトリを検索します。
-'========================
-Public Declare Function InternetFindNextFile Lib "wininet.dll" Alias "InternetFindNextFileA" _
-(ByVal hFind As Long, lpvFindData As WIN32_FIND_DATA) As Long
-******************************************************************************************
-
-
- Sub ファイル一覧取得()
-    hOpen = 0
-    hConnection = 0
-
-    'IME を off (半角英数) にする
-    If IMEStatus <> vbIMEModeOff Then
-        SendKeys "{kanji}"
+'***************************************************************************************************
+'   ■■■ ワークシート側からの呼び出し処理 ■■■
+'***************************************************************************************************
+'* 処理名　：TEST_FTP
+'* 機能　　：FTPでファイル一覧を取得
+'---------------------------------------------------------------------------------------------------
+'* 返り値　：(なし)
+'* 引数　　：(なし)
+'---------------------------------------------------------------------------------------------------
+'* 作成日　：2006年01月14日
+'* 作成者　：井上　治
+'* 更新日　：2020年03月02日
+'* 更新者　：井上　治
+'* 機能説明：
+'* 注意事項：
+'***************************************************************************************************
+Sub TEST_FTP()
+    '-----------------------------------------------------------------------------------------------
+    Dim objFTP As Object                                            ' BASP21.FTP
+    Dim vntRet As Variant                                           ' 処理結果
+    Dim swOpen As Boolean                                           ' 接続判定
+    Dim blnResult As Boolean                                        ' フォーム登録結果
+    Dim strAddr As String                                           ' 接続先ホストアドレス
+    Dim strUser As String                                           ' 接続ユーザー名
+    Dim strPass As String                                           ' パスワード
+    Dim strRoot As String                                           ' ホスト側ルートフォルダ
+    Dim strMSG As String                                            ' メッセージWORK
+    '-----------------------------------------------------------------
+    On Error Resume Next
+    Set objFTP = CreateObject("BASP21.FTP")
+    ' 接続失敗は終了(未インストール等)
+    If Err.Number <> 0 Then
+        MsgBox "「BASP21」に接続できません。"
+        Exit Sub
     End If
-
-    cnt = 0
-    'インターネットサービスのハンドル取得 - hOpen
-    hOpen = InternetOpen("FTPSample", INTERNET_OPEN_TYPE_DIRECT, vbNullString, vbNullString, 0)
-    If (hOpen <> 0) Then 'ハンドル取得成功
-
-        'インターネットセッションのハンドル取得(FTPサーバへ接続) - hConnection
-        hConnection = InternetConnect(hOpen, サーバ名, INTERNET_INVALID_PORT_NUMBER, _
-        ユーザ名, パスワード, INTERNET_SERVICE_FTP, 0, 0)
-        If (hConnection <> 0) Then '接続成功
-
-            'FTPサーバのカレントディレクトリを変更
-            result = FtpSetCurrentDirectory(hConnection, ディレクトリ)
-            If (result <> 0) Then 'ディレクトリ変更成功
-                'ファイルリストを取得
-                hFind = FtpFindFirstFile(hConnection, "*.*", w32FindData, INTERNET_FLAG_RELOAD, 0)
-                If (hFind = 0) Then
-                    MsgBox "ファイル名を取得できませんでした。"
-                Else
-                    Do
-                    strFile = Left(w32FindData.cFileName, InStr(w32FindData.cFileName, vbNullChar) - 1)
-                    strFile = Mid(strFile, InStrRev(strFile, " ") + 1) 'ファイル名にゴミが付く場合は、排除。
-                    If ((w32FindData.dwFileAttributes And FILE_ATTRIBUTE_DIRECTORY) = &H10) Then
-                    	ReDim Preserve FileList(cnt)
-                        FileList(cnt) = strFile 'ファイル名(ディレクトリ名)をファイル名リストに追加
-                        cnt = cnt + 1
-                    End If
-                    Loop Until InternetFindNextFile(hFind, w32FindData) = 0 '次のファイル名を取得
-                End If
-            Else          
-                MsgBox "ディレクトリの移動に失敗しました。"
-            End If
-        Else
-            MsgBox "FTPサーバへ接続できませんでした。"
+    On Error GoTo 0
+    '-----------------------------------------------------------------
+    ' ユーザーフォーム(FRM_FTP)から接続情報を受け取る
+    With FRM_FTP
+        ' ユーザーフォームを表示
+        .Show
+        blnResult = .prpResult
+        ' 登録されたか
+        If blnResult Then
+            strAddr = .prpAddr
+            strUser = .prpUser
+            strPass = .prpPass
+            strRoot = .prpRoot
         End If
-    Else
-        MsgBox "FTPサーバへ接続できませんでした。"
+    End With
+    Unload FRM_FTP
+    ' フォーム上でキャンセルされたら終了
+    If Not blnResult Then GoTo TEST_FTP_EXIT
+    '-----------------------------------------------------------------
+    ' ホスト接続
+    vntRet = objFTP.Connect(strAddr, strUser, strPass)
+    strMSG = objFTP.GetReply()
+    ' 接続不成功か
+    If vntRet <> 0 Then
+        MsgBox "FTPサーバ(" & strAddr & ")接続不成功, Rc=" & vntRet & vbCr & strMSG
+        GoTo TEST_FTP_EXIT
     End If
-  'インターネットセッションを閉じる
-  If (hConnection <> 0) Then InternetCloseHandle hConnection
-  'インターネットサービスを閉じる
-  If (hOpen <> 0) Then InternetCloseHandle hOpen
+    swOpen = True
+    ' ↓↓↓テストモ－ド対応↓↓↓
+    If g_cnsTEST = 1 Then Debug.Print strMSG
+    ' ↑↑↑テストモ－ド対応↑↑↑
+    ActiveSheet.Cells.ClearContents
+    '=================================================================
+    ' ルートフォルダより処理開始
+    Call GP_FTP_GetDir(objFTP, strRoot, 1, 1)
+    '=================================================================
+    ' ホスト切断(QUIT発行)
+    vntRet = objFTP.Command("QUIT")
+    strMSG = objFTP.GetReply()
+    ' ↓↓↓テストモ－ド対応↓↓↓
+    If g_cnsTEST = 1 Then Debug.Print strMSG
+    ' ↑↑↑テストモ－ド対応↑↑↑
+    If swOpen = True Then objFTP.Close
+
+'===================================================================================================
+' 終了
+TEST_FTP_EXIT:
+    Application.StatusBar = False
+    Set objFTP = Nothing
+    ThisWorkbook.Saved = True
 End Sub
 
+'***************************************************************************************************
+'   ■■■ サブ処理(Private) ■■■
+'***************************************************************************************************
+'* 処理名　：GP_FTP_GetDir
+'* 機能　　：フォルダ単位処理
+'---------------------------------------------------------------------------------------------------
+'* 返り値　：(なし)
+'* 引数　　：Arg1 = BASP21.FTP(Object)
+'* 　　　　　Arg2 = フォルダ名(String)
+'* 　　　　　Arg3 = シート上の行(Long)                      ※Ref参照
+'* 　　　　　Arg4 = シート上の列(Long)
+'---------------------------------------------------------------------------------------------------
+'* 作成日　：2006年01月14日
+'* 作成者　：井上　治
+'* 更新日　：2020年03月02日
+'* 更新者　：井上　治
+'* 機能説明：
+'* 注意事項：本処理は再帰動作、サンプルのため処理例外対応無し
+'***************************************************************************************************
+Private Sub GP_FTP_GetDir(ByRef objFTP As Object, _
+                          ByVal strPath As String, _
+                          ByRef lngRow As Long, _
+                          ByVal lngCol As Long)
+    '-----------------------------------------------------------------------------------------------
+    Dim vntRet As Variant                                           ' 処理結果
+    Dim lngIx As Long                                               ' テーブルINDEX
+    Dim strCMDText As String                                        ' FTPコマンド
+    Dim strPath2 As String                                          ' フォルダパス(編集)
+    ' ↓↓↓テストモ－ド対応↓↓↓
+    ' ※テストモードでは100件を超えたら下層のフォルダ探索は打ち切り
+    If ((g_cnsTEST = 1) And (lngRow > 100)) Then Exit Sub
+    ' ↑↑↑テストモ－ド対応↑↑↑
+    '-----------------------------------------------------------------
+    ' フォルダ名(階層状態を編集)を表示
+    lngIx = 2
+    Do While lngIx < lngCol
+        strPath2 = strPath2 & tblPath(lngIx) & "/"
+        lngIx = lngIx + 1
+    Loop
+    strPath2 = strPath2 & strPath
+    Application.StatusBar = strPath2 & " 処理中．．．．"
+    ' フォルダ名を登録
+    Cells(lngRow, lngCol).Value = "[" & strPath & "]" ' 自フォルダ名
+    tblPath(lngCol) = strPath
+    ' 行・列を加算
+    lngRow = lngRow + 1
+    lngCol = lngCol + 1
+    '-----------------------------------------------------------------
+    ' 当該フォルダに移動
+    strCMDText = "CWD " & strPath
+    ' ↓↓↓テストモ－ド対応↓↓↓
+    If g_cnsTEST = 1 Then Debug.Print strCMDText
+    ' ↑↑↑テストモ－ド対応↑↑↑
+    vntRet = objFTP.Command(strCMDText)
+    ' ↓↓↓テストモ－ド対応↓↓↓
+    If g_cnsTEST = 1 Then Debug.Print objFTP.GetReply()
+    ' ↑↑↑テストモ－ド対応↑↑↑
+    ' 配下のサブフォルダを取得
+    vntRet = objFTP.GetDir("", 1)
+    ' 配列が作成されたか
+    If IsArray(vntRet) Then
+        For lngIx = LBound(vntRet) To UBound(vntRet)
+            ' 下層のフォルダを参照(再帰呼び出し)
+            Call GP_FTP_GetDir(objFTP, Trim(vntRet(lngIx)), lngRow, lngCol)
+        Next lngIx
+    Else
+        ' ↓↓↓テストモ－ド対応↓↓↓
+        If g_cnsTEST = 1 Then Debug.Print objFTP.GetReply()
+        ' ↑↑↑テストモ－ド対応↑↑↑
+    End If
+    '-----------------------------------------------------------------
+    ' 本フォルダのファイルリストを作成
+    vntRet = objFTP.GetDir("", 2)
+    ' 配列が作成されたか
+    If IsArray(vntRet) Then
+        For lngIx = LBound(vntRet) To UBound(vntRet)
+            ' ファイルである条件を抽出(これが全てかは不明)
+            If ((Left(vntRet(lngIx), 1) <> "d") And _
+                (InStr(1, vntRet(lngIx), "", vbTextCompare) = 0)) Then
+                ' ファイル情報を登録
+                Cells(lngRow, lngCol).Value = vntRet(lngIx)
+                ' 次の行へ
+                lngRow = lngRow + 1
+            End If
+        Next lngIx
+    Else
+        ' ↓↓↓テストモ－ド対応↓↓↓
+        If g_cnsTEST = 1 Then Debug.Print objFTP.GetReply()
+        ' ↑↑↑テストモ－ド対応↑↑↑
+    End If
+    '-----------------------------------------------------------------
+    ' 上位フォルダに移動
+    strCMDText = "CDUP"
+    ' ↓↓↓テストモ－ド対応↓↓↓
+    If g_cnsTEST = 1 Then Debug.Print strCMDText & "[" & strPath2 & "]"
+    ' ↑↑↑テストモ－ド対応↑↑↑
+    vntRet = objFTP.Command(strCMDText)
+    ' ↓↓↓テストモ－ド対応↓↓↓
+    If g_cnsTEST = 1 Then Debug.Print objFTP.GetReply()
+    ' ↑↑↑テストモ－ド対応↑↑↑
+End Sub
+
+'----------------------------------------<< End of Source >>----------------------------------------

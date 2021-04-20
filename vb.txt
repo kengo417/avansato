@@ -1,0 +1,39 @@
+Declare Function SHGetPathFromIDList Lib "shell32.dll" Alias "SHGetPathFromIDListA" _
+                                        (ByVal pidl As Long, ByVal pszPath As String) As Long
+Declare Function SHBrowseForFolder Lib "shell32.dll" Alias "SHBrowseForFolderA" _
+                                        (lpBrowseInfo As BROWSEINFO) As Long
+Declare Function GetDesktopWindow Lib "user32" () As Long
+Public Type BROWSEINFO
+    hOwner As Long
+    pidlRoot As Long
+    pszDisplayName As String
+    lpszTitle As String
+    ulFlags As Long
+    lpfn As Long
+    lParam As Long
+    iImage As Long
+End Type
+
+
+
+
+Private Sub CommandButton1_Click()
+    Dim bInfo As BROWSEINFO, pPath As String
+    Dim R As Long, X As Long, pos As Integer
+    bInfo.pidlRoot = 0&
+    If IsMissing(Msg) Then
+        bInfo.lpszTitle = "フォルダの選択..."
+    Else
+        bInfo.lpszTitle = "フォルダを選択してください"
+    End If
+    bInfo.ulFlags = &H1
+    X = SHBrowseForFolder(bInfo)
+    pPath = Space$(512)
+    R = SHGetPathFromIDList(ByVal X, ByVal pPath)
+    If R Then
+        pos = InStr(pPath, Chr$(0))
+        GetFolder = Left(pPath, pos - 1)
+    Else
+        GetFolder = ""
+    End If
+End Sub

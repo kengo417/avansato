@@ -1,25 +1,13 @@
-SELECT
-    ss.sid
-    ,ss.serial#
-    ,ss.username
-    ,tu.tablespace
-    ,SUM(tu.blocks) * dts.block_size / 1024 / 1024 used_mb
-    ,sq.sql_text
-FROM
-    v$tempseg_usage tu
-    ,v$session ss
-    ,dba_tablespaces dts
-    ,v$sql sq
-WHERE
-    tu.session_addr = ss.saddr
-AND ss.sql_id = sq.sql_id
-AND tu.tablespace = dts.tablespace_name
-GROUP BY
-    ss.sid
-    ,ss.serial#
-    ,ss.username
-    ,dts.block_size
-    ,tu.tablespace
-    ,sq.sql_text
-ORDER BY
-    ss.sid;
+select
+    ses.USERNAME,
+    to_char(seg.blocks * 8192 /1024/1024, '999,999.000') Mbytes,
+    ses.SCHEMANAME,
+    ses.OSUSER,
+    ses.PROGRAM,
+    sqla.SQL_FULLTEXT
+from
+    v$tempseg_usage seg
+    inner join v$session ses on(seg.SESSION_ADDR=ses.SADDR)
+    inner join v$sqlarea sqla on(seg.SQL_ID=sqla.SQL_ID)
+order by 1,2 desc;
+

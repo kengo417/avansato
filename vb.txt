@@ -1,13 +1,25 @@
-select
-    ses.USERNAME,
-    to_char(seg.blocks * 8192 /1024/1024, '999,999.000') Mbytes,
-    ses.SCHEMANAME,
-    ses.OSUSER,
-    ses.PROGRAM,
-    sqla.SQL_FULLTEXT
-from
-    v$tempseg_usage seg
-    inner join v$session ses on(seg.SESSION_ADDR=ses.SADDR)
-    inner join v$sqlarea sqla on(seg.SQL_ID=sqla.SQL_ID)
-order by 1,2 desc;
-
+COL "USED[MB]" FORMAT 999999.9
+COL "FSIZE[MB]" FORMAT 999999.9
+COL "MAXSIZE[MB]" FORMAT 999999.9
+SELECT
+   DT.TABLESPACE_NAME,
+   NVL("USED[MB]",0 ) "USED[MB]",   -- 使用中のサイズ
+   "FSIZE[MB]",                     -- 現在のファイルサイズ
+   "MAXSIZE[MB]"                    -- 自動拡張の最大ファイルサイズ 
+FROM
+   (SELECT
+      TABLESPACE_NAME,
+      SUM(BYTES)/1024/1024 "FSIZE[MB]",
+      SUM(MAXBYTES)/1024/1024 "MAXSIZE[MB]"
+    FROM
+      DBA_TEMP_FILES
+    GROUP BY TABLESPACE_NAME) DT
+LEFT OUTER JOIN
+   (SELECT
+      TABLESPACE_NAME,
+      MIN(BYTES_USED)/1024/1024 "USED[MB]"
+    FROM GV$TEMP_EXTENT_POOL
+    GROUP BY TABLESPACE_NAME ) TE
+ON DT.TABLESPACE_NAME = TE.TABLESPACE_NAME
+ORDER BY TABLESPACE_NAME
+;
